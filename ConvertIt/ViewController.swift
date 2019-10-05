@@ -15,24 +15,30 @@ class ViewController: UIViewController {
     @IBOutlet weak var resultsLabel: UILabel!
     @IBOutlet weak var formulaPicker: UIPickerView!
     @IBOutlet weak var decimalSegment: UISegmentedControl!
+    @IBOutlet weak var signSegment: UISegmentedControl!
     
     var formulaArray = ["miles to kilometers", "kilometers to miles", "feet to meters",
-                        "yards to meters", "meters to feet", "meters to yards"]
+                        "yards to meters", "meters to feet", "meters to yards", "inches to cm", "cm to inches", "fahrenheit to celcius", "celcius to fahrenheit", "quarts to liter", "liters to quarts"]
     
     var fromUnits = ""
     var toUnits = ""
     var conversionString = ""
     
+    //MARK:- Class Methods
     override func viewDidLoad() {
         super.viewDidLoad()
         formulaPicker.delegate = self
         formulaPicker.dataSource = self
         conversionString = formulaArray[formulaPicker.selectedRow(inComponent: 0)]
+        userInput.becomeFirstResponder()
+        signSegment.isHidden = true
     }
 
     func calculateConversion() {
         guard let inputValue = Double(userInput.text!) else {
-            print("Show alert here to show that the value entered was not a number")
+            if userInput.text != "" {
+                showAlert(title: "Cannot Convert Value", message: "\"\(userInput.text!)\" is not a valid number!")
+            }
             return
         }
         var outputValue = 0.0
@@ -49,8 +55,20 @@ class ViewController: UIViewController {
             outputValue = inputValue * 3.2808
         case "meters to yards":
             outputValue = inputValue * 1.0936
+        case "inches to cm":
+            outputValue = inputValue / 0.3937
+        case "cm to inches":
+            outputValue = inputValue * 0.3937
+        case "fahrenheit to celcius":
+            outputValue = (inputValue-32) * (5/9)
+        case "celcius to fahrenheit":
+            outputValue = (inputValue*(9/5)) + 32
+        case "quarts to liter":
+            outputValue = inputValue / 1.05669
+        case "liters to quarts":
+            outputValue = inputValue * 1.05669
         default:
-            print("Show alert -- for some reason we didn't have a conversion string")
+            showAlert(title: "Unexpected Error", message: "Contact the developer and share that \"\(conversionString)\" could not be identified!")
         }
         
         let formatString = (decimalSegment.selectedSegmentIndex < decimalSegment.numberOfSegments-1 ? "%.\(decimalSegment.selectedSegmentIndex+1)f" : "%f")
@@ -58,7 +76,36 @@ class ViewController: UIViewController {
         resultsLabel.text = "\(inputValue) \(fromUnits) = \(outputString) \(toUnits)"
     }
     
+    func showAlert(title: String, message: String) {
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let defaultAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertController.addAction(defaultAction)
+        present(alertController, animated: true, completion: nil)
+    }
+    
+    //MARK:- IBActions
+    @IBAction func userInputChanged(_ sender: UITextField) {
+        resultsLabel.text = ""
+        if userInput.text?.first == "-" {
+            signSegment.selectedSegmentIndex = 1
+        } else {
+            signSegment.selectedSegmentIndex = 0
+        }
+        if userInput.text != "-" {
+            calculateConversion()
+        }
+    }
+    
     @IBAction func decimalSelected(_ sender: UISegmentedControl) {
+        calculateConversion()
+    }
+    
+    @IBAction func signSegmentSelected(_ sender: UISegmentedControl) {
+        if signSegment.selectedSegmentIndex == 0 {
+            userInput.text = userInput.text?.replacingOccurrences(of: "-", with: "")
+        } else {
+            userInput.text = "-" + userInput.text!
+        }
         calculateConversion()
     }
     
@@ -68,6 +115,7 @@ class ViewController: UIViewController {
     
 } 
 
+//MARK:- PickerView Extension
 extension ViewController: UIPickerViewDelegate, UIPickerViewDataSource {
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
         return 1
@@ -79,6 +127,13 @@ extension ViewController: UIPickerViewDelegate, UIPickerViewDataSource {
         return formulaArray[row]
     }
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        if conversionString.lowercased().contains("celsius") {
+            signSegment.isHidden = false
+        } else {
+            signSegment.isHidden = true
+            userInput.text = userInput.text?.replacingOccurrences(of: "-", with: "")
+            signSegment.selectedSegmentIndex = 0
+        }
         conversionString = formulaArray[row]
         let unitsArray = formulaArray[row].components(separatedBy: " to ")
         fromUnits = unitsArray[0]
